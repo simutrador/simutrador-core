@@ -7,7 +7,7 @@ These models represent price candle data from external APIs and internal storage
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, override
+from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer
 
@@ -57,7 +57,6 @@ class PriceCandle(BaseModel):
         """Serialize volume field to 8 decimal places for crypto precision."""
         return f"{value:.8f}"
 
-    @override
     def model_post_init(self, __context: Any) -> None:
         """Validate that high >= low and open/close are within range."""
         if self.high < self.low:
@@ -101,7 +100,6 @@ class PriceDataSeries(BaseModel):
         default=None, description="Pagination information (when paginated)"
     )
 
-    @override
     def model_post_init(self, __context: Any) -> None:
         """Set start and end dates based on candles if not provided."""
         if self.candles:
