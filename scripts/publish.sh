@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# Publish helper for Python libraries with uv
+# Repeats steps 1–5: bump version -> checks -> build -> TestPyPI publish -> PyPI publish
+# Requires: uv, sed, python3, ~/.pypirc with testpypi/pypi tokens OR pass --username/--password to uv publish
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+usage() {
+  cat <<'USAGE'
+Usage: scripts/publish.sh [options]
+
+Options:
+  --bump [major|minor|patch]   Bump semantic version in pyproject.toml automatically
+  --set-version X.Y.Z          Set an explicit version
+  --skip-testpypi              Skip publishing to TestPyPI
+  --skip-verify                Skip post-publish install verification hints
+  --publish-pypi               Automatically publish to PyPI (no prompt)
+  -h, --help                   Show this help
+
+Examples:
+  scripts/publish.sh --bump patch
+  scripts/publish.sh --set-version 1.1.0 --publish-pypi
+USAGE
+}
+
+BUMP=""
+NEW_VERSION=""
+SKIP_TESTPYPI=false
+SKIP_VERIFY=false
+AUTO_PYPI=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --bump) BUMP="${2:-}"; shift 2 ;;
+    --set-version) NEW_VERSION="${2:-}"; shift 2 ;;
+    --skip-testpypi) SKIP_TESTPYPI=true; shift ;;
+    --skip-verify) SKIP_VERIFY=true; shift ;;
+    --publish-pypi) AUTO_PYPI=true; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1"; usage; exit 1 ;;
+  esac
+done
+
+get_current_version() {
+  python3 - <<'PY'
+import re,sys
+with open('pyproject.toml','r',encoding='utf-8') as f:
+    t=f.read()
+m=re.search(r'^version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"', t, re.M)
+if not m:
+    print("", end="")
+else:
+    print(m.group(1))
+PY
+}
+
+bump_version() {
+  local cur="$1" kind="$2"
+  python3 - "$cur" "$kind" <<'PY'
+import sys
+cur=sys.argv[1]
+kind=sys.argv[2]
+try:
+    major,minor,patch=map(int,cur.split('.'))
+except Exception:
+    print(cur)
+    sys.exit(0)
+if kind=='major':
+    major+=1; minor=0; patch=0
+elif kind=='minor':
+    minor+=1; patch=0
+else:
+    patch+=1
+print(f"{major}.{minor}.{patch}")
+PY
+}
+
+set_version_in_pyproject() {
+  local v="$1"
+  # BSD sed (macOS) inline replace
+  sed -i '' -E "s/^version\s*=\s*\"[0-9]+\.[0-9]+\.[0-9]+\"/version = \"${v}\"/" pyproject.toml
+}
+
+CURRENT_VERSION="$(get_current_version)"
+if [[ -z "$CURRENT_VERSION" ]]; then
+  echo "Could not detect current version from pyproject.toml" >&2
+  exit 1
+fi
+
+echo "Current version: ${CURRENT_VERSION}"
+
+if [[ -n "$NEW_VERSION" && -n "$BUMP" ]]; then
+  echo "Choose either --set-version or --bump, not both" >&2
+  exit 1
+fi
+
+if [[ -n "$BUMP" ]]; then
+  case "$BUMP" in
+    major|minor|patch) :;;
+    *) echo "--bump must be one of: major, minor, patch" >&2; exit 1;;
+  esac
+  NEW_VERSION="$(bump_version "$CURRENT_VERSION" "$BUMP")"
+fi
+
+if [[ -z "$NEW_VERSION" ]]; then
+  read -r -p "Enter new version (blank to keep ${CURRENT_VERSION}): " NEW_VERSION || true
+fi
+
+if [[ -z "$NEW_VERSION" ]]; then
+  NEW_VERSION="$CURRENT_VERSION"
+fi
+
+if [[ "$NEW_VERSION" != "$CURRENT_VERSION" ]]; then
+  echo "Updating version to ${NEW_VERSION} in pyproject.toml"
+  set_version_in_pyproject "$NEW_VERSION"
+fi
+
+echo "\nStep 1: Quality checks"
+echo "  - Ruff --fix"
+uv run ruff check --fix src/
+
+echo "  - Pyright strict type checking"
+uv run pyright src/
+
+echo "\nStep 2: Build"
+uv build
+
+echo "\nStep 3: Publish to TestPyPI${SKIP_TESTPYPI:+ (skipped)}"
+if [[ "$SKIP_TESTPYPI" == false ]]; then
+  uv publish --repository testpypi
+  echo "  TestPyPI page: https://test.pypi.org/project/simutrador-core/${NEW_VERSION}/"
+fi
+
+if [[ "$SKIP_VERIFY" == false && "$SKIP_TESTPYPI" == false ]]; then
+  cat <<EOF
+\nStep 4: Verify install from TestPyPI (manual quick check)
+  uv pip install -i https://test.pypi.org/simple/ simutrador-core==${NEW_VERSION}
+  uv run python -c "import simutrador_core; print(simutrador_core.__version__)"
+  uv pip uninstall -y simutrador-core
+EOF
+fi
+
+if [[ "$AUTO_PYPI" == true ]]; then
+  echo "\nStep 5: Publishing to PyPI (auto)"
+  uv publish
+  echo "  PyPI page: https://pypi.org/project/simutrador-core/${NEW_VERSION}/"
+else
+  read -r -p $'\nProceed to publish to PyPI now? [y/N] ' ans
+  if [[ "${ans,,}" == "y" ]]; then
+    uv publish
+    echo "  PyPI page: https://pypi.org/project/simutrador-core/${NEW_VERSION}/"
+  else
+    echo "Skipped PyPI publish. You can run: uv publish"
+  fi
+fi
+
+echo "\n✅ Done."
+
