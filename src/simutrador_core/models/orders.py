@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
+from typing_extensions import override
 
 from .enums import OrderSide, OrderType
 
@@ -54,6 +55,7 @@ class Order(BaseModel):
             raise ValueError("Price levels must be positive")
         return v
 
+    @override
     def model_post_init(self, __context: Any) -> None:
         """Additional validation after model initialization."""
         if self.entry_type == OrderType.LIMIT and self.entry_price is None:
