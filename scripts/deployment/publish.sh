@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publish helper for Python libraries with uv
 # Repeats steps 1–5: bump version -> checks -> build -> TestPyPI publish -> PyPI publish
-# Requires: uv, sed, python3, ~/.pypirc with testpypi/pypi tokens OR pass --username/--password to uv publish
+# Requires: uv, sed, python3. Authenticate with --token or UV_PUBLISH_TOKEN env var (see docs).
 
 set -euo pipefail
 
@@ -45,7 +45,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 get_current_version() {
-  python3 - <<'PY'
+  uv run python - <<'PY'
 import re,sys
 with open('pyproject.toml','r',encoding='utf-8') as f:
     t=f.read()
@@ -83,6 +83,47 @@ set_version_in_pyproject() {
   # BSD sed (macOS) inline replace
   sed -i '' -E "s/^version\s*=\s*\"[0-9]+\.[0-9]+\.[0-9]+\"/version = \"${v}\"/" pyproject.toml
 }
+
+# Resolve tokens from environment or ~/.pypirc
+PYPIRC_PATH="${PYPIRC_PATH:-$HOME/.pypirc}"
+
+get_token_from_pypirc() {
+  local section="$1" path="$2"
+  python3 - "$section" "$path" <<'PY'
+import sys, os, configparser
+name, path = sys.argv[1], sys.argv[2]
+cp = configparser.ConfigParser()
+try:
+    with open(os.path.expanduser(path), 'r', encoding='utf-8') as f:
+        cp.read_file(f)
+except Exception:
+    print("", end="")
+    sys.exit(0)
+sect = cp[name] if cp.has_section(name) else None
+if sect:
+    token = sect.get('password') or ""
+    print(token, end="")
+else:
+    print("", end="")
+PY
+}
+
+get_token_for() {
+  local name="$1"
+  # Prefer specific env var
+  if [[ "$name" == "testpypi" && -n "${TESTPYPI_TOKEN:-}" ]]; then
+    echo "$TESTPYPI_TOKEN"; return 0; fi
+  if [[ "$name" == "pypi" && -n "${PYPI_TOKEN:-}" ]]; then
+    echo "$PYPI_TOKEN"; return 0; fi
+  # Try ~/.pypirc
+  local tok
+  tok="$(get_token_from_pypirc "$name" "$PYPIRC_PATH")"
+  if [[ -n "$tok" ]]; then echo "$tok"; return 0; fi
+  # Fallback to UV_PUBLISH_TOKEN if set (useful if set permanently)
+  if [[ -n "${UV_PUBLISH_TOKEN:-}" ]]; then echo "$UV_PUBLISH_TOKEN"; return 0; fi
+  echo ""; return 0
+}
+
 
 CURRENT_VERSION="$(get_current_version)"
 if [[ -z "$CURRENT_VERSION" ]]; then
@@ -130,7 +171,12 @@ uv build
 
 echo "\nStep 3: Publish to TestPyPI${SKIP_TESTPYPI:+ (skipped)}"
 if [[ "$SKIP_TESTPYPI" == false ]]; then
-  uv publish --repository testpypi
+  TKN="$(get_token_for testpypi)"
+  if [[ -z "$TKN" ]]; then
+    echo "  ⚠️  No token found for TestPyPI. Set TESTPYPI_TOKEN, or add it to ~/.pypirc under [testpypi], or set UV_PUBLISH_TOKEN."
+    exit 1
+  fi
+  UV_PUBLISH_TOKEN="$TKN" uv publish --index testpypi
   echo "  TestPyPI page: https://test.pypi.org/project/simutrador-core/${NEW_VERSION}/"
 fi
 
@@ -145,12 +191,22 @@ fi
 
 if [[ "$AUTO_PYPI" == true ]]; then
   echo "\nStep 5: Publishing to PyPI (auto)"
-  uv publish
+  TKN_PYPI="$(get_token_for pypi)"
+  if [[ -z "$TKN_PYPI" ]]; then
+    echo "  ⚠️  No token found for PyPI. Set PYPI_TOKEN, or add it to ~/.pypirc under [pypi], or set UV_PUBLISH_TOKEN."
+    exit 1
+  fi
+  UV_PUBLISH_TOKEN="$TKN_PYPI" uv publish
   echo "  PyPI page: https://pypi.org/project/simutrador-core/${NEW_VERSION}/"
 else
   read -r -p $'\nProceed to publish to PyPI now? [y/N] ' ans
   if [[ "${ans,,}" == "y" ]]; then
-    uv publish
+    TKN_PYPI="$(get_token_for pypi)"
+    if [[ -z "$TKN_PYPI" ]]; then
+      echo "  ⚠️  No token found for PyPI. Set PYPI_TOKEN, or add it to ~/.pypirc under [pypi], or set UV_PUBLISH_TOKEN."
+      exit 1
+    fi
+    UV_PUBLISH_TOKEN="$TKN_PYPI" uv publish
     echo "  PyPI page: https://pypi.org/project/simutrador-core/${NEW_VERSION}/"
   else
     echo "Skipped PyPI publish. You can run: uv publish"

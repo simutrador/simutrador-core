@@ -205,4 +205,4 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-TestPyPI-Recovery-Codes-cksrc-2025-08-16T11_40_12.522917.txt
+scripts/deployment/recovery-codes/*
