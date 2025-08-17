@@ -5,8 +5,13 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
+
+# Neutralize pyenv for this script so uv/system Python is used even if .python-version exists
+if command -v pyenv >/dev/null 2>&1; then
+  export PYENV_VERSION="system"
+fi
 
 usage() {
   cat <<'USAGE'
@@ -59,7 +64,7 @@ PY
 
 bump_version() {
   local cur="$1" kind="$2"
-  python3 - "$cur" "$kind" <<'PY'
+  uv run python - "$cur" "$kind" <<'PY'
 import sys
 cur=sys.argv[1]
 kind=sys.argv[2]
@@ -138,26 +143,33 @@ if [[ -n "$NEW_VERSION" && -n "$BUMP" ]]; then
   exit 1
 fi
 
+# Decide target versioning action
 if [[ -n "$BUMP" ]]; then
   case "$BUMP" in
     major|minor|patch) :;;
     *) echo "--bump must be one of: major, minor, patch" >&2; exit 1;;
   esac
-  NEW_VERSION="$(bump_version "$CURRENT_VERSION" "$BUMP")"
-fi
-
-if [[ -z "$NEW_VERSION" ]]; then
+  echo "Bumping version (${BUMP}) via uv..."
+  uv version --bump "$BUMP" --no-sync
+elif [[ -n "$NEW_VERSION" ]]; then
+  echo "Setting version to ${NEW_VERSION} via uv..."
+  uv version "$NEW_VERSION" --no-sync
+else
   read -r -p "Enter new version (blank to keep ${CURRENT_VERSION}): " NEW_VERSION || true
+  if [[ -n "$NEW_VERSION" && "$NEW_VERSION" != "$CURRENT_VERSION" ]]; then
+    echo "Setting version to ${NEW_VERSION} via uv..."
+    uv version "$NEW_VERSION" --no-sync
+  else
+    echo "Keeping current version ${CURRENT_VERSION}"
+  fi
 fi
 
-if [[ -z "$NEW_VERSION" ]]; then
-  NEW_VERSION="$CURRENT_VERSION"
-fi
+# Re-read current version from pyproject to confirm
+NEW_VERSION_RESOLVED="$(get_current_version)"
+echo "Effective version in pyproject.toml: ${NEW_VERSION_RESOLVED}"
 
-if [[ "$NEW_VERSION" != "$CURRENT_VERSION" ]]; then
-  echo "Updating version to ${NEW_VERSION} in pyproject.toml"
-  set_version_in_pyproject "$NEW_VERSION"
-fi
+# Safety: clean dist/ so stale artifacts don't cause confusion
+rm -rf dist/
 
 echo "\nStep 1: Quality checks"
 echo "  - Ruff --fix"
@@ -169,7 +181,8 @@ uv run pyright src/
 echo "\nStep 2: Build"
 uv build
 
-echo "\nStep 3: Publish to TestPyPI${SKIP_TESTPYPI:+ (skipped)}"
+if [[ "$SKIP_TESTPYPI" == true ]]; then suffix=" (skipped)"; else suffix=""; fi
+printf "\nStep 3: Publish to TestPyPI%s\n" "$suffix"
 if [[ "$SKIP_TESTPYPI" == false ]]; then
   TKN="$(get_token_for testpypi)"
   if [[ -z "$TKN" ]]; then
@@ -199,8 +212,10 @@ if [[ "$AUTO_PYPI" == true ]]; then
   UV_PUBLISH_TOKEN="$TKN_PYPI" uv publish
   echo "  PyPI page: https://pypi.org/project/simutrador-core/${NEW_VERSION}/"
 else
-  read -r -p $'\nProceed to publish to PyPI now? [y/N] ' ans
-  if [[ "${ans,,}" == "y" ]]; then
+  printf "\nProceed to publish to PyPI now? [y/N] "
+  read -r ans
+  ans_lc=$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]')
+  if [ "$ans_lc" = "y" ]; then
     TKN_PYPI="$(get_token_for pypi)"
     if [[ -z "$TKN_PYPI" ]]; then
       echo "  ⚠️  No token found for PyPI. Set PYPI_TOKEN, or add it to ~/.pypirc under [pypi], or set UV_PUBLISH_TOKEN."
@@ -213,5 +228,5 @@ else
   fi
 fi
 
-echo "\n✅ Done."
+echo "✅ Done."
 

@@ -1,6 +1,6 @@
 [project]
 name = "simutrador-core"
-version = "1.0.0"
+version = "1.0.3"
 description = "Core models and utilities for SimuTrador trading simulation platform"
 readme = "README.md"
 license = {text = "MIT"}
@@ -39,6 +39,14 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/simutrador_core"]
+include = [
+  "src/simutrador_core/py.typed",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/simutrador_core/py.typed",
+]
 
 # Configure alternative index for TestPyPI
 [[tool.uv.index]]
