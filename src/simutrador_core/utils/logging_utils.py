@@ -8,13 +8,12 @@ across all SimuTrador components for consistent logging behavior.
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional
 
 
 def setup_logger(
     name: str,
     log_level: int = logging.INFO,
-    log_dir: Optional[Path] = None,
+    log_dir: Path | None = None,
     console_level: int = logging.INFO,
     file_level: int = logging.ERROR,
     max_bytes: int = 5 * 1024 * 1024,  # 5MB
