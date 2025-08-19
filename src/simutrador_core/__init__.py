@@ -6,14 +6,14 @@ Shared models, utilities, and interfaces for the SimuTrador trading simulation p
 This library provides:
 - Pydantic models for price data, orders, and WebSocket communication
 - Enums for order types, sides, and asset classifications
-- Utility functions for timeframe conversion and validation
+- Utility functions for timeframe conversion, validation, and logging
 - Abstract interfaces for data providers and storage systems
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.5"
 
 # Re-export commonly used models and utilities
-from .models import (
+from simutrador_core.models import (
     AccountSnapshotData,
     # Asset classification
     AssetType,
@@ -33,6 +33,18 @@ from .models import (
     WSMessage,
     get_asset_config,
     get_resampling_offset,
+)
+from simutrador_core.utils import (
+    # Logging utilities
+    configure_third_party_loggers,
+    get_default_logger,
+    # Timeframe utilities
+    get_pandas_frequency,
+    get_resampling_rules,
+    get_supported_timeframes,
+    get_timeframe_minutes,
+    setup_logger,
+    validate_timeframe_conversion,
 )
 
 __all__ = [
@@ -56,4 +68,14 @@ __all__ = [
     "AssetType",
     "get_asset_config",
     "get_resampling_offset",
+    # Timeframe utilities
+    "get_timeframe_minutes",
+    "get_pandas_frequency",
+    "validate_timeframe_conversion",
+    "get_supported_timeframes",
+    "get_resampling_rules",
+    # Logging utilities
+    "setup_logger",
+    "get_default_logger",
+    "configure_third_party_loggers",
 ]
