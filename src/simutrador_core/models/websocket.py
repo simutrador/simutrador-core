@@ -1,30 +1,35 @@
 """
 WebSocket message models for SimuTrador trading simulation.
 
-These models define the communication protocol between clients and the simulation server.
-Based on the WebSocket API v2.0 specification.
+These models define the public protocol between clients and the simulation server
+as described in the WebSocket API v2 documentation. Fields are aligned with the
+examples; additional fields are optional to allow forward-compatibility.
 """
 
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from .enums import OrderSide, OrderType
+from .enums import OrderSide
 
 # ===== CORE MESSAGE ENVELOPE =====
 
 
 class WSMessage(BaseModel):
-    """All WebSocket messages use this envelope."""
+    """Generic envelope: {"type": "...", "data": {...}, "request_id": "..."}.
+
+    Timestamp is optional (not present in all examples) and may be added by the server.
+    """
 
     type: str = Field(..., description="Message type")
-    data: dict[str, Any] = Field(
-        ..., description="Payload (simple dict for JSON safety)"
+    data: dict[str, Any] = Field(..., description="Payload dictionary")
+    request_id: str | None = Field(
+        None, description="For request/response correlation when applicable"
     )
-    request_id: str | None = Field(None, description="For request/response correlation")
-    timestamp: datetime = Field(..., description="Message timestamp")
+    timestamp: datetime | None = Field(None, description="Message timestamp")
 
 
 # ===== AUTHENTICATION & CONNECTION =====
@@ -33,16 +38,15 @@ class WSMessage(BaseModel):
 class ConnectionReadyData(BaseModel):
     """Server confirms WebSocket connection and authentication."""
 
-    user_id: str = Field(..., description="Authenticated user ID")
-    plan: str = Field(..., description="User plan (starter, professional, enterprise)")
-    server_time: datetime = Field(..., description="Current server time")
-    connection_expires_at: datetime = Field(..., description="When connection expires")
-    idle_timeout_sec: int = Field(..., description="Idle timeout in seconds")
-    max_simulation_duration_sec: int = Field(..., description="Max simulation duration")
-    concurrent_connections_limit: int = Field(
-        ..., description="Max concurrent connections"
-    )
-    supported_features: list[str] = Field(..., description="Supported features list")
+    user_id: str
+    plan: str
+    connection_expires_at: datetime
+    idle_timeout_sec: int
+    max_simulation_duration_sec: int
+    concurrent_connections_limit: int
+    # Optional extras the server may include
+    server_time: datetime | None = None
+    supported_features: list[str] = Field(default_factory=list)
 
 
 class ConnectionWarningData(BaseModel):
@@ -50,11 +54,11 @@ class ConnectionWarningData(BaseModel):
 
     warning_type: Literal[
         "approaching_timeout", "imminent_closure", "rate_limit_warning"
-    ] = Field(..., description="Type of warning")
-    message: str = Field(..., description="Warning message")
-    expires_at: datetime | None = Field(None, description="When connection expires")
-    action_required: str = Field(..., description="Required action")
-    seconds_remaining: int | None = Field(None, description="Seconds until closure")
+    ]
+    message: str
+    expires_at: datetime | None = None
+    action_required: str
+    seconds_remaining: int | None = None
 
 
 class ConnectionClosingData(BaseModel):
@@ -67,43 +71,36 @@ class ConnectionClosingData(BaseModel):
         "rate_limit",
         "simulation_complete",
         "server_maintenance",
-    ] = Field(..., description="Reason for closure")
-    message: str = Field(..., description="Closure message")
-    close_code: int = Field(..., description="WebSocket close code")
-    reconnect_allowed: bool = Field(..., description="Whether reconnection is allowed")
-    session_state: str | None = Field(None, description="Session state after closure")
+    ]
+    message: str
+    close_code: int
+    reconnect_allowed: bool
+    session_state: str | None = None
 
 
 # ===== SESSION MANAGEMENT =====
 
 
 class CreateSessionData(BaseModel):
-    """WebSocket: Create new simulation session."""
+    """Client: Create new simulation session."""
 
-    session_id: str = Field(..., description="Unique session identifier")
-    symbols: list[str] = Field(..., description="list of symbols to trade")
-    start: datetime = Field(..., description="Simulation start time")
-    end: datetime = Field(..., description="Simulation end time")
-    data_provider: str = Field(default="polygon", description="Data provider to use")
-    initial_cash: Decimal = Field(..., description="Starting cash amount")
-    commission_per_trade: Decimal = Field(
-        default=Decimal("1.00"), description="Commission per trade"
-    )
-    slippage_bps: int = Field(default=5, description="Slippage in basis points")
+    session_id: str
+    symbols: list[str]
+    start: datetime
+    end: datetime
+    data_provider: str = Field(default="polygon")
+    initial_cash: Decimal
 
 
 class SessionCreatedData(BaseModel):
-    """WebSocket: Session creation confirmation."""
+    """Server: Session creation confirmation."""
 
-    session_id: str = Field(..., description="Session identifier")
-    estimated_ticks: int = Field(..., description="Total estimated ticks in simulation")
-    symbols_loaded: list[str] = Field(..., description="Symbols with data available")
-    data_range_actual: dict[str, Any] = Field(
-        ..., description="Actual data availability per symbol"
-    )
-    server_ready: bool = Field(
-        ..., description="Whether server is ready for simulation"
-    )
+    session_id: str
+    estimated_ticks: int
+    symbols_loaded: list[str]
+    # Optional extras
+    data_range_actual: dict[str, Any] | None = None
+    server_ready: bool | None = None
 
 
 # ===== SIMULATION CONTROL =====
@@ -112,172 +109,137 @@ class SessionCreatedData(BaseModel):
 class SimulationStartData(BaseModel):
     """Client requests simulation start."""
 
-    flow_control: bool = Field(default=True, description="Enable tick acknowledgments")
-    max_pending_ticks: int = Field(default=1, description="Backpressure control")
-    account_update_frequency: Literal["every_fill", "every_tick", "on_demand"] = Field(
-        default="every_fill", description="Account update frequency"
-    )
+    flow_control: bool = True
+    max_pending_ticks: int = 1
 
 
 class SimulationStartedData(BaseModel):
     """Server confirms simulation has begun."""
 
-    session_id: str = Field(..., description="Session identifier")
-    started_at: datetime = Field(..., description="Simulation start timestamp")
-    estimated_duration_sec: int = Field(
-        ..., description="Estimated duration in seconds"
-    )
-    tick_interval_ms: int = Field(..., description="Time between ticks in milliseconds")
-    flow_control_enabled: bool = Field(
-        ..., description="Whether flow control is enabled"
-    )
+    session_id: str
+    started_at: datetime
+    flow_control_enabled: bool
+    # Optional extras
+    estimated_duration_sec: int | None = None
+    tick_interval_ms: int | None = None
 
 
 class TickData(BaseModel):
     """Server advances simulation time."""
 
-    sim_time: datetime = Field(..., description="Current simulation time")
-    sequence_id: int = Field(..., description="Sequence ID for ordering guarantees")
-    market_session: Literal["pre_market", "regular", "after_hours"] = Field(
-        ..., description="Current market session"
-    )
-    symbols_trading: list[str] = Field(
-        ..., description="Symbols tradeable at this time"
-    )
-    is_eod: bool = Field(default=False, description="Whether this is end of day")
+    sim_time: datetime
+    sequence_id: int
+    # Optional extras
+    market_session: Literal["pre_market", "regular", "after_hours"] | None = None
+    symbols_trading: list[str] | None = None
+    is_eod: bool = False
 
 
 class TickAckData(BaseModel):
     """Client acknowledges tick and signals readiness."""
 
-    sequence_id: int = Field(..., description="Echo from TickData")
-    processing_status: Literal["ready", "processing", "need_time"] = Field(
-        ..., description="Client processing status"
-    )
-    orders_pending: int = Field(
-        default=0, description="Number of orders client will send"
-    )
-    max_wait_ms: int = Field(default=1000, description="Maximum wait time needed")
+    sequence_id: int
+    processing_status: Literal["ready", "processing", "need_time"]
+    orders_pending: int = 0
+    max_wait_ms: int = 1000
 
 
 # ===== ORDER MANAGEMENT =====
 
 
+class WSOrderType(str, Enum):
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP = "stop"
+    STOP_LIMIT = "stop_limit"
+
+
 class OrderData(BaseModel):
     """Individual order within a batch."""
 
-    order_id: str = Field(..., description="Unique order identifier")
-    symbol: str = Field(..., description="Trading symbol")
-    side: OrderSide = Field(..., description="Order side (buy/sell)")
-    type: OrderType = Field(..., description="Order type (market/limit)")
-    quantity: int = Field(..., description="Order quantity", gt=0)
-    price: Decimal | None = Field(
-        None, description="Limit price (required for limit orders)"
-    )
-    stop_loss: Decimal | None = Field(None, description="Stop loss price")
-    take_profit: Decimal | None = Field(None, description="Take profit price")
-    time_in_force: Literal["day", "gtc", "ioc"] = Field(
-        default="day", description="Time in force"
-    )
+    order_id: str
+    symbol: str
+    side: OrderSide
+    type: WSOrderType
+    quantity: int = Field(gt=0)
+    price: Decimal | None = None  # Limit price (for limit/stop_limit)
+    stop_loss: Decimal | None = None
+    take_profit: Decimal | None = None
+    time_in_force: Literal["day", "gtc", "ioc"] = "day"
 
 
 class OrderBatchData(BaseModel):
     """Client submits batch of orders."""
 
-    batch_id: str = Field(..., description="Unique batch identifier")
-    orders: list[OrderData] = Field(..., description="list of orders in batch")
-    execution_mode: Literal["atomic", "best_effort"] = Field(
-        default="best_effort", description="Execution mode"
-    )
-    parent_strategy: str | None = Field(
-        None, description="Strategy identifier for tracking"
-    )
+    batch_id: str
+    orders: list[OrderData]
+    execution_mode: Literal["atomic", "best_effort"] = "best_effort"
+    parent_strategy: str | None = None
 
 
 class BatchAckData(BaseModel):
     """Server acknowledges order batch."""
 
-    batch_id: str = Field(..., description="Batch identifier")
-    accepted_orders: list[str] = Field(..., description="Order IDs that were accepted")
-    rejected_orders: dict[str, str] = Field(
-        ..., description="Order ID to rejection reason mapping"
-    )
-    estimated_fills: dict[str, Decimal] = Field(
-        ..., description="Order ID to estimated fill price"
-    )
+    batch_id: str
+    accepted_orders: list[str]
+    rejected_orders: dict[str, str]
+    estimated_fills: dict[str, Decimal]
 
 
 class ExecutionReportData(BaseModel):
     """Server reports order execution."""
 
-    execution_id: str = Field(..., description="Unique execution identifier")
-    order_id: str = Field(..., description="Order identifier")
-    symbol: str = Field(..., description="Trading symbol")
-    side: OrderSide = Field(..., description="Order side")
-    quantity: int = Field(..., description="Executed quantity")
-    price: Decimal = Field(..., description="Execution price")
-    timestamp: datetime = Field(..., description="Execution timestamp")
-    commission: Decimal = Field(..., description="Commission charged")
-    slippage_bps: int = Field(..., description="Slippage applied in basis points")
+    execution_id: str
+    order_id: str
+    symbol: str
+    executed_quantity: int
+    executed_price: Decimal
+    commission: Decimal
+    slippage_bps: int
+    timestamp: datetime | None = None
 
 
 # ===== ACCOUNT & PORTFOLIO =====
 
 
 class PositionData(BaseModel):
-    """Current position in a symbol."""
-
-    symbol: str = Field(..., description="Trading symbol")
-    quantity: int = Field(
-        ..., description="Position quantity (positive=long, negative=short)"
-    )
-    avg_cost: Decimal = Field(..., description="Average cost basis")
-    market_value: Decimal = Field(..., description="Current market value")
-    unrealized_pnl: Decimal = Field(..., description="Unrealized profit/loss")
+    symbol: str
+    quantity: int
+    avg_cost: Decimal
 
 
 class AccountSnapshotData(BaseModel):
-    """Current account state."""
-
-    cash: Decimal = Field(..., description="Available cash")
-    equity: Decimal = Field(..., description="Total equity")
-    buying_power: Decimal = Field(..., description="Available buying power")
-    day_pnl: Decimal = Field(..., description="Day profit/loss")
-    positions: list[PositionData] = Field(..., description="Current positions")
-    open_orders: list[str] = Field(..., description="Open order IDs")
+    cash: Decimal
+    equity: Decimal
+    positions: list[PositionData]
+    # Optional extras
+    buying_power: Decimal | None = None
+    day_pnl: Decimal | None = None
+    open_orders: list[str] | None = None
 
 
 # ===== ERROR HANDLING =====
 
 
 class ErrorData(BaseModel):
-    """Enhanced error reporting."""
-
-    error_code: str = Field(..., description="Error code (e.g., INVALID_ORDER)")
-    message: str = Field(..., description="Error message")
-    error_type: Literal["validation", "execution", "connection", "data"] = Field(
-        ..., description="Error type"
-    )
-    severity: Literal["warning", "error", "fatal"] = Field(
-        ..., description="Error severity"
-    )
-    details: dict[str, Any] | None = Field(None, description="Additional error details")
-    retry_allowed: bool = Field(default=False, description="Whether retry is allowed")
+    error_code: str
+    message: str
+    error_type: Literal["validation", "execution", "connection", "data", "rate_limit"]
+    severity: Literal["warning", "error", "fatal"]
+    recoverable: bool
+    details: dict[str, Any] | None = None
 
 
-# ===== SIMULATION END =====
+# ===== SIMULATION COMPLETION =====
 
 
 class SimulationEndData(BaseModel):
-    """Final simulation results."""
-
-    session_id: str = Field(..., description="Session identifier")
-    final_equity: Decimal = Field(..., description="Final equity value")
-    total_return_pct: Decimal = Field(..., description="Total return percentage")
-    total_trades: int = Field(..., description="Total number of trades")
-    win_rate: Decimal = Field(..., description="Win rate percentage")
-    sharpe_ratio: Decimal | None = Field(None, description="Sharpe ratio")
-    max_drawdown_pct: Decimal = Field(..., description="Maximum drawdown percentage")
-    simulation_duration_sec: int = Field(
-        ..., description="Simulation duration in seconds"
-    )
+    session_id: str
+    final_equity: Decimal
+    total_trades: int
+    sharpe_ratio: Decimal | None = None
+    # Optional extras
+    total_return_pct: Decimal | None = None
+    win_rate: Decimal | None = None
+    max_drawdown_pct: Decimal | None = None
+    simulation_duration_sec: int | None = None
