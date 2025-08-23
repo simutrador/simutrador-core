@@ -10,7 +10,7 @@ This library provides:
 - Abstract interfaces for data providers and storage systems
 """
 
-__version__ = "1.0.5"
+__version__ = "1.0.9"
 
 # Re-export commonly used models and utilities
 from simutrador_core.models import (
@@ -18,6 +18,7 @@ from simutrador_core.models import (
     # Asset classification
     AssetType,
     ExecutionReportData,
+    HealthStatus,
     OrderBatchData,
     OrderData,
     OrderSide,
@@ -60,6 +61,7 @@ __all__ = [
     "OrderBatchData",
     # WebSocket communication
     "WSMessage",
+    "HealthStatus",
     "TickData",
     "TickAckData",
     "ExecutionReportData",

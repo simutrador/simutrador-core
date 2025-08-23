@@ -44,6 +44,7 @@ from .websocket import (
     CreateSessionData,
     ErrorData,
     ExecutionReportData,
+    HealthStatus,
     OrderBatchData,
     OrderData,
     PositionData,
@@ -81,6 +82,7 @@ __all__ = [
     "is_24_7_market",
     # WebSocket models
     "WSMessage",
+    "HealthStatus",
     "ConnectionReadyData",
     "ConnectionWarningData",
     "ConnectionClosingData",

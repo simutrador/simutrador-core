@@ -32,6 +32,18 @@ class WSMessage(BaseModel):
     timestamp: datetime | None = Field(None, description="Message timestamp")
 
 
+# ===== HEALTH =====
+
+
+class HealthStatus(BaseModel):
+    """Standardized health status payload sent in WSMessage.data for health checks."""
+
+    status: Literal["ok", "degraded", "unhealthy"] = "ok"
+    server_time: datetime | None = None
+    server_version: str | None = None
+    message: str | None = None
+
+
 # ===== AUTHENTICATION & CONNECTION =====
 
 
