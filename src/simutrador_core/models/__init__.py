@@ -54,6 +54,10 @@ from .websocket import (
     SimulationStartedData,
     TickAckData,
     TickData,
+    TokenRequest,
+    TokenResponse,
+    UserLimitsResponse,
+    UserPlan,
     WSMessage,
 )
 
@@ -83,21 +87,31 @@ __all__ = [
     # WebSocket models
     "WSMessage",
     "HealthStatus",
+    # Authentication models
+    "TokenRequest",
+    "TokenResponse",
+    "UserLimitsResponse",
+    "UserPlan",
+    # Connection models
     "ConnectionReadyData",
     "ConnectionWarningData",
     "ConnectionClosingData",
+    # Session models
     "CreateSessionData",
     "SessionCreatedData",
     "SimulationStartData",
     "SimulationStartedData",
     "TickData",
     "TickAckData",
+    # Order models
     "OrderData",
     "OrderBatchData",
     "BatchAckData",
     "ExecutionReportData",
+    # Portfolio models
     "PositionData",
     "AccountSnapshotData",
+    # Error and completion models
     "ErrorData",
     "SimulationEndData",
 ]

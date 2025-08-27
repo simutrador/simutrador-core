@@ -15,6 +15,17 @@ from pydantic import BaseModel, Field
 
 from .enums import OrderSide
 
+# ===== ENUMS =====
+
+
+class UserPlan(str, Enum):
+    """User subscription plans with different rate limits."""
+
+    FREE = "free"
+    PROFESSIONAL = "professional"
+    ENTERPRISE = "enterprise"
+
+
 # ===== CORE MESSAGE ENVELOPE =====
 
 
@@ -44,7 +55,36 @@ class HealthStatus(BaseModel):
     message: str | None = None
 
 
-# ===== AUTHENTICATION & CONNECTION =====
+# ===== AUTHENTICATION =====
+
+
+class TokenRequest(BaseModel):
+    """REST API: Request JWT token (API key sent in header)."""
+
+    # API key sent in X-API-Key header, no body needed
+    pass
+
+
+class TokenResponse(BaseModel):
+    """REST API: JWT token response."""
+
+    access_token: str
+    expires_in: int  # Token lifetime in seconds
+    token_type: str = "Bearer"
+    user_id: str
+    plan: UserPlan
+
+
+class UserLimitsResponse(BaseModel):
+    """REST API: Current user rate limits."""
+
+    plan: UserPlan
+    limits: dict[str, int]  # Current limits
+    usage: dict[str, int]  # Current usage
+    reset_times: dict[str, datetime]  # When limits reset
+
+
+# ===== CONNECTION =====
 
 
 class ConnectionReadyData(BaseModel):
