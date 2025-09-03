@@ -23,6 +23,7 @@ from .asset_types import (
 from .enums import (
     OrderSide,
     OrderType,
+    SessionState,
     TradeResult,
 )
 from .price_data import (
@@ -72,6 +73,7 @@ __all__ = [
     # Enums
     "OrderType",
     "OrderSide",
+    "SessionState",
     "TradeResult",
     # Asset types
     "AssetType",

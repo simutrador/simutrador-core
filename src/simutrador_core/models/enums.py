@@ -25,3 +25,14 @@ class TradeResult(str, Enum):
     TAKE_PROFIT = "tp"
     STOP_LOSS = "sl"
     TIMEOUT = "timeout"
+
+
+class SessionState(str, Enum):
+    """Session state enumeration for simulation sessions."""
+
+    INITIALIZING = "initializing"
+    READY = "ready"
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    ERROR = "error"
