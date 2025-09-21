@@ -2,6 +2,12 @@
 
 Core models and utilities for the SimuTrador platform.
 
+## 📚 Documentation
+
+- **WebSocket API**: [SimuTrade WebSocket API v2.0](https://github.com/simutrador/simutrador-docs/blob/main/SimuTrador/simutrador-server/ws_api_v2.md) - Complete API specification for trading simulation
+- **Project Overview**: [SimuTrador Architecture](https://github.com/simutrador/simutrador-docs/blob/main/SimuTrador/main.md)
+- **Package Documentation**: All models include full type hints and docstrings
+
 ## Publishing
 
 This repo includes a helper script to publish releases to TestPyPI and PyPI using `uv`.
