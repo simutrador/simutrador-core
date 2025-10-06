@@ -189,7 +189,7 @@ if [[ "$SKIP_TESTPYPI" == false ]]; then
     echo "  ⚠️  No token found for TestPyPI. Set TESTPYPI_TOKEN, or add it to ~/.pypirc under [testpypi], or set UV_PUBLISH_TOKEN."
     exit 1
   fi
-  UV_PUBLISH_TOKEN="$TKN" uv publish --index testpypi
+  UV_PUBLISH_TOKEN="$TKN" uv publish --publish-url https://test.pypi.org/legacy/
   echo "  TestPyPI page: https://test.pypi.org/project/simutrador-core/${NEW_VERSION}/"
 fi
 
