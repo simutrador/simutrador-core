@@ -210,3 +210,4 @@ scripts/deployment/recovery-codes/*
 ai-index.md
 README.md
 scripts/docs_guard.py
+.augment/rules/rules.md
