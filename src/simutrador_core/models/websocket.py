@@ -14,6 +14,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from .enums import OrderSide
+from .price_data import PriceCandle, Timeframe
 
 # ===== ENUMS =====
 
@@ -177,10 +178,24 @@ class SimulationStartedData(BaseModel):
 
 
 class TickData(BaseModel):
-    """Server advances simulation time."""
+    """Server advances simulation time.
+
+    Now includes per-tick candlestick data for one or more symbols.
+    The server SHOULD populate the `candles` field on every tick.
+    """
 
     sim_time: datetime
     sequence_id: int
+
+    # New fields for candlestick delivery
+    timeframe: Timeframe | None = Field(
+        default=None, description="Timeframe of the emitted candles (e.g., 1min, 5min)"
+    )
+    candles: dict[str, PriceCandle] | None = Field(
+        default=None,
+        description="Mapping of symbol -> OHLCV candle for this tick",
+    )
+
     # Optional extras
     market_session: Literal["pre_market", "regular", "after_hours"] | None = None
     symbols_trading: list[str] | None = None
