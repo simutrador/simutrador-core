@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -374,7 +374,7 @@ wheels = [
 
 [[package]]
 name = "simutrador-core"
-version = "1.0.13"
+version = "1.0.14"
 source = { editable = "." }
 dependencies = [
     { name = "pandas" },

@@ -1,6 +1,6 @@
 [project]
 name = "simutrador-core"
-version = "1.0.13"
+version = "1.0.14"
 description = "Core models and utilities for SimuTrador trading simulation platform"
 readme = "README.md"
 license = {text = "MIT"}
@@ -71,7 +71,7 @@ src = ["src"]
 exclude = ["__pycache__", ".venv", "build", "dist"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
+select = ["E", "F", "I", "N", "ARG", "UP"]
 ignore = []
 
 [tool.ruff.lint.isort]

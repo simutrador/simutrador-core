@@ -145,6 +145,25 @@ class CreateSessionData(BaseModel):
     initial_cash: Decimal
 
 
+
+class StartSimulationRequest(BaseModel):
+    """Client: Start simulation request matching server API.
+
+    This model intentionally mirrors the server's current expected fields so both
+    client and server share the same contract without adapters.
+    """
+
+    symbols: list[str]
+    start_date: datetime
+    end_date: datetime
+    initial_capital: Decimal
+    # Optional parameters
+    data_provider: str | None = None
+    commission_per_share: Decimal | None = None
+    slippage_bps: int | None = None
+    metadata: dict[str, Any] | None = None
+
+
 class SessionCreatedData(BaseModel):
     """Server: Session creation confirmation."""
 

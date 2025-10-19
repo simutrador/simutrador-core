@@ -53,6 +53,7 @@ from .websocket import (
     SimulationEndData,
     SimulationStartData,
     SimulationStartedData,
+    StartSimulationRequest,
     TickAckData,
     TickData,
     TokenRequest,
@@ -103,6 +104,7 @@ __all__ = [
     "SessionCreatedData",
     "SimulationStartData",
     "SimulationStartedData",
+    "StartSimulationRequest",
     "TickData",
     "TickAckData",
     # Order models
