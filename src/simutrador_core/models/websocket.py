@@ -44,6 +44,15 @@ class WSMessage(BaseModel):
     timestamp: datetime | None = Field(None, description="Message timestamp")
 
 
+
+# ===== SYSTEM / PING =====
+
+
+class PongData(BaseModel):
+    """Server pong payload (mirrors current server behavior)."""
+
+    server_time: datetime
+
 # ===== HEALTH =====
 
 
@@ -173,6 +182,38 @@ class SessionCreatedData(BaseModel):
     # Optional extras
     data_range_actual: dict[str, Any] | None = None
     server_ready: bool | None = None
+
+
+# ===== SESSION CREATED (SERVER RESPONSES) =====
+
+
+class SessionCreatedResponseData(BaseModel):
+    """Server: session_created payload (created or ready state).
+
+    Mirrors current server shape; dates are datetimes and Decimals are numeric when
+    dumped via model_dump(mode="json"), matching the server's existing behavior.
+    """
+
+    session_id: str
+    status: Literal["created"] = "created"
+    symbols: list[str]
+    start_date: datetime
+    end_date: datetime
+    initial_capital: Decimal
+    state: str
+    created_at: datetime
+    data_provider: str
+    commission_per_share: Decimal
+    slippage_bps: int | None = None
+
+
+class SessionQueuedResponseData(SessionCreatedResponseData):
+    """Server: session_created payload when queued.
+
+    Extends SessionCreatedResponseData with queue_position.
+    """
+
+    queue_position: int
 
 
 # ===== SIMULATION CONTROL =====

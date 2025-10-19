@@ -49,8 +49,11 @@ from .websocket import (
     HealthStatus,
     OrderBatchData,
     OrderData,
+    PongData,
     PositionData,
     SessionCreatedData,
+    SessionCreatedResponseData,
+    SessionQueuedResponseData,
     SimulationEndData,
     SimulationStartData,
     SimulationStartedData,
@@ -93,6 +96,7 @@ __all__ = [
     # WebSocket models
     "WSMessage",
     "HealthStatus",
+    "PongData",
     # Authentication models
     "TokenRequest",
     "TokenResponse",
@@ -105,6 +109,8 @@ __all__ = [
     # Session models
     "CreateSessionData",
     "SessionCreatedData",
+    "SessionCreatedResponseData",
+    "SessionQueuedResponseData",
     "SimulationStartData",
     "SimulationStartedData",
     "StartSimulationRequest",
