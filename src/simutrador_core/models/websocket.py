@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from .enums import OrderSide
+from .enums import OrderSide, WSErrorCode
 from .price_data import PriceCandle, Timeframe
 
 # ===== ENUMS =====
@@ -306,6 +306,24 @@ class AccountSnapshotData(BaseModel):
 
 # ===== ERROR HANDLING =====
 
+
+
+
+def build_error(
+    code: WSErrorCode | str,
+    message: str,
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a standardized error payload for WSMessage.data.
+
+    This preserves the existing public shape used by the server:
+    {"error_code": "...", "message": "...", "details": {...}}
+    """
+
+    payload: dict[str, Any] = {"error_code": str(code), "message": message}
+    if details:
+        payload["details"] = details
+    return payload
 
 class ErrorData(BaseModel):
     error_code: str

@@ -25,6 +25,7 @@ from .enums import (
     OrderType,
     SessionState,
     TradeResult,
+    WSErrorCode,
 )
 from .price_data import (
     DataUpdateStatus,
@@ -61,6 +62,7 @@ from .websocket import (
     UserLimitsResponse,
     UserPlan,
     WSMessage,
+    build_error,
 )
 
 __all__ = [
@@ -76,6 +78,7 @@ __all__ = [
     "OrderSide",
     "SessionState",
     "TradeResult",
+    "WSErrorCode",
     # Asset types
     "AssetType",
     "MarketSession",
@@ -118,4 +121,6 @@ __all__ = [
     # Error and completion models
     "ErrorData",
     "SimulationEndData",
+    # Helpers
+    "build_error",
 ]
