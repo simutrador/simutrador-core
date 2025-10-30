@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+from typing_extensions import override
 
 from .enums import OrderSide, WSErrorCode
 from .price_data import PriceCandle, Timeframe
@@ -158,19 +159,38 @@ class CreateSessionData(BaseModel):
 class StartSimulationRequest(BaseModel):
     """Client: Start simulation request matching server API.
 
-    This model intentionally mirrors the server's current expected fields so both
-    client and server share the same contract without adapters.
+    Adds explicit timeframe and warmup controls, preserving existing fields.
     """
 
     symbols: list[str]
     start_date: datetime
     end_date: datetime
     initial_capital: Decimal
-    # Optional parameters
+
+    # New required parameters
+    timeframe: Timeframe = Field(
+        ..., description="Candle resolution for the session (e.g., 1min, 5min, daily)"
+    )
+    warmup_bars: int = Field(
+        ..., ge=0, description="Number of historical candles to warm up per symbol"
+    )
+    adjusted: bool = Field(
+        default=True, description="Use adjusted prices when available"
+    )
+
+    # Existing optional parameters
     data_provider: str | None = None
     commission_per_share: Decimal | None = None
     slippage_bps: int | None = None
     metadata: dict[str, Any] | None = None
+
+    @override
+    def model_post_init(self, __context: Any) -> None:
+        """Validate symbols non-empty and date range coherent."""
+        if not self.symbols:
+            raise ValueError("symbols must be a non-empty list")
+        if self.start_date >= self.end_date:
+            raise ValueError("start_date must be earlier than end_date")
 
 
 class SessionCreatedData(BaseModel):
@@ -237,6 +257,21 @@ class SimulationStartedData(BaseModel):
     tick_interval_ms: int | None = None
 
 
+
+# ===== HISTORY SNAPSHOT =====
+
+
+class HistorySnapshotData(BaseModel):
+    """Server-emitted history snapshot sent once before ticks (type = 'history_snapshot')."""
+
+    session_id: str
+    timeframe: Timeframe
+    candles: dict[str, list[PriceCandle]]
+    start: datetime | None = None
+    end: datetime | None = None
+    count: int
+
+
 class TickData(BaseModel):
     """Server advances simulation time.
 
@@ -282,7 +317,11 @@ class WSOrderType(str, Enum):
 
 
 class OrderData(BaseModel):
-    """Individual order within a batch."""
+    """Individual order within a batch.
+
+    Brackets: when provided on an entry order, stop_loss/take_profit act as an
+    attached bracket; the server manages OCO child orders internally.
+    """
 
     order_id: str
     symbol: str

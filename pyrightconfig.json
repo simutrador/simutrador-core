@@ -1,7 +1,7 @@
 {
   "venvPath": ".",
   "venv": ".venv",
-  "include": ["src"],
+  "include": ["src", "tests"],
   "exclude": [
     "**/__pycache__",
     "**/.venv",
@@ -18,6 +18,9 @@
     },
     {
       "root": "tests",
+      "extraPaths": [
+        "src"
+      ],
       "reportPrivateUsage": "none"
     }
   ],
