@@ -22,6 +22,7 @@ from .asset_types import (
 # Enums
 from .enums import (
     OrderSide,
+    OrderStatus,
     OrderType,
     SessionState,
     TradeResult,
@@ -34,6 +35,11 @@ from .price_data import (
     PriceDataSeries,
     PriceQuote,
     Timeframe,
+)
+from .trading_state import (
+    OpenOrderState,
+    SessionTradingState,
+    SymbolPriceState,
 )
 
 # WebSocket communication models
@@ -82,6 +88,7 @@ __all__ = [
     "SessionState",
     "TradeResult",
     "WSErrorCode",
+    "OrderStatus",
     # Asset types
     "AssetType",
     "MarketSession",
@@ -124,6 +131,10 @@ __all__ = [
     # Portfolio models
     "PositionData",
     "AccountSnapshotData",
+    # Trading state models
+    "OpenOrderState",
+    "SessionTradingState",
+    "SymbolPriceState",
     # Error and completion models
     "ErrorData",
     "SimulationEndData",

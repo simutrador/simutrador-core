@@ -10,7 +10,7 @@ This library provides:
 - Abstract interfaces for data providers and storage systems
 """
 
-__version__ = "1.0.10"
+__version__ = "1.0.19"
 
 # Re-export commonly used models and utilities
 from simutrador_core.models import (

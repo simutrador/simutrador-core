@@ -38,6 +38,14 @@ class SessionState(str, Enum):
     ERROR = "error"
 
 
+class OrderStatus(str, Enum):
+    """Lifecycle status for orders managed by the execution engine."""
+
+    OPEN = "open"
+    FILLED = "filled"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+
 
 class WSErrorCode(str, Enum):
     """Standard WebSocket error codes shared across client and server.
