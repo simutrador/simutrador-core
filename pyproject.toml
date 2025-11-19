@@ -1,6 +1,6 @@
 [project]
 name = "simutrador-core"
-version = "1.0.19"
+version = "1.0.20"
 description = "Core models and utilities for SimuTrador trading simulation platform"
 readme = "README.md"
 license = {text = "MIT"}

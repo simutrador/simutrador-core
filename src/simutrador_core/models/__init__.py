@@ -38,6 +38,7 @@ from .price_data import (
 )
 from .trading_state import (
     OpenOrderState,
+    PositionBracketState,
     SessionTradingState,
     SymbolPriceState,
 )
@@ -133,6 +134,7 @@ __all__ = [
     "AccountSnapshotData",
     # Trading state models
     "OpenOrderState",
+    "PositionBracketState",
     "SessionTradingState",
     "SymbolPriceState",
     # Error and completion models

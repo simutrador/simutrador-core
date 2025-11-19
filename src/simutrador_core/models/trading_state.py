@@ -9,6 +9,7 @@ or serialize the internal trading state.
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -45,6 +46,23 @@ class SymbolPriceState(BaseModel):
     last_price: Decimal
 
 
+class PositionBracketState(BaseModel):
+    """Server-side bracket configuration attached to an open position.
+
+    Tracks stop-loss/take-profit configuration and time-in-force for exit
+    management. This is stored inside SessionTradingState and not sent
+    directly over the wire.
+    """
+
+    symbol: str
+    side: OrderSide
+    quantity: int
+    stop_loss: Decimal | None = None
+    take_profit: Decimal | None = None
+    time_in_force: Literal["day", "gtc", "ioc"] = "day"
+
+
+
 class SessionTradingState(BaseModel):
     """Aggregate trading state for a single simulation session.
 
@@ -57,4 +75,5 @@ class SessionTradingState(BaseModel):
     open_orders: list[OpenOrderState] = []
     last_prices: list[SymbolPriceState] = []
     trade_count: int = 0
+    brackets: list[PositionBracketState] = []
 
